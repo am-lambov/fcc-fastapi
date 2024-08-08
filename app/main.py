@@ -1,11 +1,16 @@
 import random
 import time
 
-from fastapi import FastAPI, status, HTTPException
+from fastapi import FastAPI, status, HTTPException, Depends
 from pydantic import BaseModel
 import psycopg
 from psycopg.rows import dict_row
+from sqlalchemy.orm import Session
 
+from . import models
+from .database import engine, get_db
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -37,9 +42,14 @@ async def root():
     return {"message": "Hello World"}
 
 
+@app.get("/sqlalchemy")
+async def test_post(db: Session = Depends(get_db)):
+    return {"status": "success"}
+
+
 @app.get("/posts")
 async def get_posts():
-    posts =cursor.execute("SELECT * FROM posts").fetchall()
+    posts = cursor.execute("SELECT * FROM posts").fetchall()
     return {"data": {"posts": posts}}
 
 
@@ -59,13 +69,13 @@ async def get_latest_post():
 @app.get("/posts/{post_id}")
 async def get_post(post_id: int):
     post = cursor.execute("SELECT * FROM posts WHERE id = %s ", [post_id]).fetchone()
-                          
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {post_id} was not found.",
         )
-        
+
     return {"data": post}
 
 
@@ -76,7 +86,7 @@ def create_posts(post: Post):
                     VALUES (%s, %s, %s) 
                     RETURNING *
                    """,
-          (post.title, post.content, post.published))
+                   (post.title, post.content, post.published))
     new_post = cursor.fetchone()
     conn.commit()
     return {"data": new_post}
@@ -86,7 +96,6 @@ def create_posts(post: Post):
 def delete_post(post_id: int):
     cursor.execute("DELETE FROM posts WHERE id = %s", [post_id])
 
-    
     if not cursor.rowcount:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -109,14 +118,14 @@ async def update_put_post(post_id: int, post: Post):
                                         id = %s
                                     RETURNING *
                         """,
-                              [post.title, post.content, post.published, post_id]).fetchone()
-    
+                                  [post.title, post.content, post.published, post_id]).fetchone()
+
     if not cursor.rowcount:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {post_id} was not found.",
         )
-    
+
     conn.commit()
     return {"message": f"Post with id: {post_id} was successfully updated.", "data": updated_post}
 
