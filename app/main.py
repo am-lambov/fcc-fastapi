@@ -34,7 +34,9 @@ async def get_post(post_id: int, db: Session = Depends(get_db)):
     return post
 
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
+@app.post(
+    "/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse
+)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     new_post = models.Post(**post.model_dump())
     db.add(new_post)
@@ -42,6 +44,25 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     db.refresh(new_post)
 
     return new_post
+
+
+@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    is_existing_user = bool(
+        db.query(models.User).filter(models.User.email == user.email).first()
+    )
+    if is_existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists.",
+        )
+
+    new_user = models.User(**user.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
 
 
 @app.delete("/posts/{post_id}", status_code=status.HTTP_200_OK)
@@ -61,7 +82,9 @@ def delete_post(post_id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/posts/{post_id}", response_model=schemas.PostResponse)
-async def update_put_post(post_id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
+async def update_put_post(
+    post_id: int, post: schemas.PostCreate, db: Session = Depends(get_db)
+):
     post_query = db.query(models.Post).filter(models.Post.id == post_id)
 
     if not post_query.first():
