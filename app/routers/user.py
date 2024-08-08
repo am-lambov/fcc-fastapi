@@ -5,14 +5,10 @@ from starlette import status
 from app import schemas, models, utils
 from app.database import get_db
 
-router = APIRouter(
-    prefix="/users"
-)
+router = APIRouter(prefix="/users")
 
 
-@router.post(
-    "/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut
-)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     is_existing_user = bool(
         db.query(models.User).filter(models.User.email == user.email).first()
@@ -46,3 +42,10 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         )
 
     return user
+
+
+@router.get("/", response_model=list[schemas.UserOut])
+def get_users(db: Session = Depends(get_db)):
+    users = db.query(models.User).all()
+
+    return users
