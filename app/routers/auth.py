@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from starlette import status
 
-from app import schemas, models, utils
+from app import schemas, models, utils, oauth2
 from app.database import get_db
 
 router = APIRouter(tags=["Authentication"])
@@ -18,11 +18,12 @@ def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
         .first()
     )
 
-    is_valid_password = utils.verify_password(user_credentials.password, registered_user.password)
-
-    if not registered_user or not is_valid_password:
+    if not registered_user or not utils.verify_password(
+        user_credentials.password, registered_user.password
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong Credentials"
         )
 
-    return {"token": "to be implemented"}
+    access_token = oauth2.create_access_token(data={"user_id": registered_user.id})
+    return {"access_token": access_token, "token_type": "bearer"}
