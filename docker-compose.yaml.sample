@@ -1,0 +1,15 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: fcc-postgres
+    environment:
+      POSTGRES_PASSWORD: --> PASSWORD_HERE <--
+    volumes:
+      - fcc-pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  fcc-pgdata:
