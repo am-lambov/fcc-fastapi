@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
-from . import models
-from .database import engine
-from .routers import post, user, auth
+from app import models
+from app.database import engine
+from app.routers import post, user, auth
 
 models.Base.metadata.create_all(bind=engine)
 
