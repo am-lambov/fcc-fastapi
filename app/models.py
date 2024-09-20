@@ -24,3 +24,6 @@ class User(Base):
     created_at = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
     )
+
+    def __repr__(self):
+        return f"User with id: {self.id}, email: {self.email}, registered_on: {self.created_at}"
