@@ -8,7 +8,10 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 @router.get("/", response_model=list[schemas.PostResponse])
-async def get_posts(db: Session = Depends(get_db)):
+async def get_posts(
+    db: Session = Depends(get_db),
+    token_data: schemas.TokenData = Depends(oauth2.get_current_user),
+):
     posts = db.query(models.Post).all()
     return posts
 
@@ -44,7 +47,11 @@ def create_posts(
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_200_OK)
-def delete_post(post_id: int, db: Session = Depends(get_db)):
+def delete_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+    token_data: schemas.TokenData = Depends(oauth2.get_current_user),
+):
     post = db.query(models.Post).filter(models.Post.id == post_id)
 
     if not post.first():
@@ -61,7 +68,10 @@ def delete_post(post_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{post_id}", response_model=schemas.PostResponse)
 async def update_put_post(
-    post_id: int, post: schemas.PostCreate, db: Session = Depends(get_db)
+    post_id: int,
+    post: schemas.PostCreate,
+    db: Session = Depends(get_db),
+    token_data: schemas.TokenData = Depends(oauth2.get_current_user),
 ):
     post_query = db.query(models.Post).filter(models.Post.id == post_id)
 
