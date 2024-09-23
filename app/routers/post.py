@@ -38,6 +38,7 @@ def create_posts(
     current_user: models.User = Depends(oauth2.get_current_user),
 ):
     new_post = models.Post(**post.model_dump())
+    new_post.author_id = current_user.id
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
