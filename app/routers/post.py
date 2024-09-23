@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
 
@@ -52,19 +54,34 @@ def delete_post(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
 ):
-    post = db.query(models.Post).filter(models.Post.id == post_id)
+    post = fetch_post_from_db(db, post_id)
+    check_authorship(current_user, post)
+    delete_post_from_db(db, post_id)
 
-    if not post.first():
+    return {"message": f"Post with id: {post_id} was successfully deleted."}
+
+
+def check_authorship(current_user, post):
+    if not post.author_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can delete only your own posts.",
+        )
+
+
+def delete_post_from_db(db, post_id):
+    db.query(models.Post).filter(models.Post.id == post_id).delete(synchronize_session=False)
+    db.commit()
+
+
+def fetch_post_from_db(db, post_id) -> models.Post:
+    post: Optional[models.Post] = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {post_id} was not found.",
         )
-
-    post.delete(synchronize_session=False)
-    db.commit()
-
-    return {"message": f"Post with id: {post_id} was successfully deleted."}
-
+    return post
 
 @router.put("/{post_id}", response_model=schemas.PostResponse)
 async def update_put_post(
