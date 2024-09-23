@@ -8,7 +8,6 @@ class PostBase(BaseModel):
     title: str
     content: str
     published: bool = True
-    author_id: int
 
 
 class PostCreate(PostBase):
@@ -18,6 +17,7 @@ class PostCreate(PostBase):
 class PostResponse(PostBase):
     id: int
     created_at: datetime
+    author_id: int
 
     class Config:
         from_attributes = True
