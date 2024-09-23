@@ -8,6 +8,7 @@ class PostBase(BaseModel):
     title: str
     content: str
     published: bool = True
+    author_id: int
 
 
 class PostCreate(PostBase):
