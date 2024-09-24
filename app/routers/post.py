@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, Type
 
 from fastapi import Depends, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
 
-from app import schemas, models, oauth2
+from app import schemas, oauth2
+from app.models import User, Post
 from app.database import get_db
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -12,22 +13,15 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 @router.get("/", response_model=list[schemas.PostResponse])
 async def get_posts(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(oauth2.get_current_user),
+    current_user: User = Depends(oauth2.get_current_user),
 ):
-    posts = db.query(models.Post).all()
+    posts: Optional[list[Type[Post]]] = db.query(Post).all()
     return posts
 
 
 @router.get("/{post_id}", response_model=schemas.PostResponse)
 async def get_post(post_id: int, db: Session = Depends(get_db)):
-    post = db.query(models.Post).get({"id": post_id})
-
-    if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"post with id: {post_id} was not found.",
-        )
-
+    post: Post = fetch_post_from_db(db, post_id)
     return post
 
 
@@ -37,9 +31,9 @@ async def get_post(post_id: int, db: Session = Depends(get_db)):
 def create_posts(
     post: schemas.PostCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(oauth2.get_current_user),
+    current_user: User = Depends(oauth2.get_current_user),
 ):
-    new_post = models.Post(**post.model_dump())
+    new_post: Post = Post(**post.model_dump())
     new_post.author_id = current_user.id
     db.add(new_post)
     db.commit()
@@ -52,14 +46,14 @@ def create_posts(
 def delete_post(
     post_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(oauth2.get_current_user),
+    current_user: User = Depends(oauth2.get_current_user),
 ):
-    post = fetch_post_from_db(db, post_id)
+    post: Post = fetch_post_from_db(db, post_id)
     check_permission_to_delete_post(current_user, post)
     delete_post_from_db(db, post_id)
 
 
-def check_permission_to_delete_post(user, post):
+def check_permission_to_delete_post(user: User, post: Post) -> None:
     if not is_author(user, post):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -67,21 +61,16 @@ def check_permission_to_delete_post(user, post):
         )
 
 
-def is_author(user, post) -> bool:
+def is_author(user: User, post: Post) -> bool:
     return post.author_id == user.id
 
 
-def delete_post_from_db(db, post_id):
-    db.query(models.Post).filter(models.Post.id == post_id).delete(
-        synchronize_session=False
-    )
+def delete_post_from_db(db: Session, post_id: int) -> None:
+    db.query(Post).filter(Post.id == post_id).delete(synchronize_session=False)
     db.commit()
 
-
-def fetch_post_from_db(db, post_id) -> models.Post:
-    post: Optional[models.Post] = (
-        db.query(models.Post).filter(models.Post.id == post_id).first()
-    )
+def fetch_post_from_db(db: Session, post_id: int) -> Post:
+    post: Optional[Post] = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -95,9 +84,9 @@ async def update_put_post(
     post_id: int,
     post: schemas.PostCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(oauth2.get_current_user),
+    current_user: User = Depends(oauth2.get_current_user),
 ):
-    post_query = db.query(models.Post).filter(models.Post.id == post_id)
+    post_query = db.query(Post).filter(Post.id == post_id)
 
     if not post_query.first():
         raise HTTPException(
