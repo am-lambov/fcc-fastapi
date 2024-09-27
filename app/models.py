@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, Boolean, String, TIMESTAMP, text, ForeignKey
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -18,6 +19,7 @@ class Post(Base):
         ForeignKey("users.id", ondelete="CASCADE", onupdate="CASCADE"),
         nullable=False,
     )
+    author = relationship("User")
 
 
 class User(Base):
