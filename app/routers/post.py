@@ -14,8 +14,9 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 async def get_posts(
     db: Session = Depends(get_db),
     current_user: User = Depends(oauth2.get_current_user),
+    limit: int = 10, skip: int = 0
 ):
-    posts: Optional[list[Type[Post]]] = db.query(Post).all()
+    posts: Optional[list[Type[Post]]] = db.query(Post).limit(limit).offset(skip).all()
     return posts
 
 
