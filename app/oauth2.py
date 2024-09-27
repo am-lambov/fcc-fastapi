@@ -1,21 +1,19 @@
 import datetime
+import jwt
 
 from fastapi import Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jwt import PyJWTError
 from sqlalchemy.orm import Session
-
 from app import schemas, models, database
-
-import jwt
-
 from app.schemas import TokenData
+from config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-SECRET_KEY = "40Sd6qd17d0a8Im0CcPFVUvumGmxdof5gtdzXNnLLEpgUZW2"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.HASHING_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = int(settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 
 def create_access_token(data: dict):
