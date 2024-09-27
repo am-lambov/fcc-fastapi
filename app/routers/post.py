@@ -49,15 +49,15 @@ def delete_post(
     current_user: User = Depends(oauth2.get_current_user),
 ):
     post: Post = fetch_post_from_db(db, post_id)
-    check_permission_to_delete_post(current_user, post)
+    check_permission_to_edit_post(current_user, post)
     delete_post_from_db(db, post_id)
 
 
-def check_permission_to_delete_post(user: User, post: Post) -> None:
+def check_permission_to_edit_post(user: User, post: Post) -> None:
     if not is_author(user, post):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can delete only your own posts.",
+            detail="You can update/delete only your own posts.",
         )
 
 
@@ -68,6 +68,7 @@ def is_author(user: User, post: Post) -> bool:
 def delete_post_from_db(db: Session, post_id: int) -> None:
     db.query(Post).filter(Post.id == post_id).delete(synchronize_session=False)
     db.commit()
+
 
 def fetch_post_from_db(db: Session, post_id: int) -> Post:
     post: Optional[Post] = db.query(Post).filter(Post.id == post_id).first()
@@ -82,19 +83,19 @@ def fetch_post_from_db(db: Session, post_id: int) -> Post:
 @router.put("/{post_id}", response_model=schemas.PostResponse)
 async def update_put_post(
     post_id: int,
-    post: schemas.PostCreate,
+    updated_post: schemas.PostCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(oauth2.get_current_user),
 ):
-    post_query = db.query(Post).filter(Post.id == post_id)
+    old_post = fetch_post_from_db(db, post_id)
+    check_permission_to_edit_post(current_user, old_post)
+    await update_post(db, updated_post, post_id)
 
-    if not post_query.first():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"post with id: {post_id} was not found.",
-        )
+    return fetch_post_from_db(db, post_id)
 
-    post_query.update(post.model_dump(), synchronize_session=False)
+
+async def update_post(db, post, post_id):
+    db.query(Post).filter(Post.id == post_id).update(
+        post.model_dump(), synchronize_session=False
+    )
     db.commit()
-
-    return post_query.first()
